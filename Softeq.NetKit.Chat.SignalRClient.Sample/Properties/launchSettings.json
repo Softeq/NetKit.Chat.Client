@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Softeq.NetKit.Chat.SignalRClient.Sample": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
