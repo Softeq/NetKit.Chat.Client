@@ -1,7 +1,7 @@
 # NetKit.Chat.Client
 
 Softeq.NetKit.Chat.Client is a client that allows to quickly test NetKit.Chat Nuget. 
-Service tests the following management types:
+Service tests the following types of functional:
 1. Channels
 2. Messages
 3. Members
