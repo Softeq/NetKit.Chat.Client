@@ -2,6 +2,7 @@
 // http://www.softeq.com
 
 using System.Threading.Tasks;
+using Softeq.NetKit.Chat.SignalRClient.DTOs;
 using Softeq.NetKit.Chat.SignalRClient.DTOs.Channel;
 using Softeq.NetKit.Chat.SignalRClient.DTOs.Member;
 using Softeq.NetKit.Chat.SignalRClient.DTOs.Message;
@@ -15,7 +16,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Abstract
         Task Disconnect();
 
         Task<ChannelSummaryResponse> CreateChannelAsync(CreateChannelRequest request);
-        Task<ChannelSummaryResponse> CreateDirectChannelAsync(CreateDirectChannelRequest model);
+        Task<ChannelSummaryResponse> CreateDirectChannelAsync(CreateDirectChannelRequest request);
         Task<ChannelSummaryResponse> UpdateChannelAsync(UpdateChannelRequest request);
         Task PinChannelAsync(PinChannelRequest request);
         Task MuteChannelAsync(MuteChannelRequest request);

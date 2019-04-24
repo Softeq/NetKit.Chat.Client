@@ -2,184 +2,159 @@
 // http://www.softeq.com
 
 using System;
-using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Logging;
 using Softeq.NetKit.Chat.SignalRClient.Abstract;
+using Softeq.NetKit.Chat.SignalRClient.DTOs;
 using Softeq.NetKit.Chat.SignalRClient.DTOs.Channel;
 using Softeq.NetKit.Chat.SignalRClient.DTOs.Member;
 using Softeq.NetKit.Chat.SignalRClient.DTOs.Message;
 using Softeq.NetKit.Chat.SignalRClient.DTOs.Client;
+using Softeq.NetKit.Chat.SignalRClient.DTOs.Validation;
+using Softeq.NetKit.Chat.SignalRClient.Extensions;
 
 namespace Softeq.NetKit.Chat.SignalRClient
 {
     public class SignalRClient : ISignalRClient
     {
-        private const string CreateChannelCommandName = "CreateChannelAsync";
-        private const string CreateDirectChannelCommandName = "CreateDirectChannelAsync";
-        private const string UpdateChannelCommandName = "UpdateChannelAsync";
-        private const string MuteChannelCommandName = "MuteChannelAsync";
-        private const string PinChannelCommandName = "PinChannelAsync";
-        private const string CloseChannelCommandName = "CloseChannelAsync";
-        private const string JoinToChannelCommandName = "JoinToChannelAsync";
-        private const string LeaveChannelCommandName = "LeaveChannelAsync";
-        private const string AddMessageCommandName = "AddMessageAsync";
-        private const string DeleteMessageCommandName = "DeleteMessageAsync";
-        private const string UpdateMessageCommandName = "UpdateMessageAsync";
-        private const string MarkAsReadMessageCommandName = "MarkAsReadMessageAsync";
-        private const string GetClientCommandName = "GetClientAsync";
-        private const string InviteMemberCommandName = "InviteMemberAsync";
-        private const string DeleteMemberCommandName = "DeleteMemberAsync";
-        private const string InviteMultipleMembersCommandName = "InviteMultipleMembersAsync";
-        private const string DeleteClientCommandName = "DeleteClientAsync";
-        private const string AddClientCommandName = "AddClientAsync";
-
         private HubConnection _connection;
-        public string SourceUrl { get; }
+        private readonly string _chatHubUrl;
+        private readonly List<IDisposable> _subscriptions = new List<IDisposable>();
+        private IDisposable _accessTokenExpiredSubscription;
+
+        #region Events
+
+        public event Action AccessTokenExpired;
+        public event Action Disconnected;
 
         public event Action<ChannelSummaryResponse> ChannelUpdated;
         public event Action<ChannelSummaryResponse> ChannelAdded;
         public event Action<ChannelSummaryResponse> ChannelClosed;
 
         public event Action<MessageResponse> MessageAdded;
-        public event Action<MessageResponse> MessageDeleted;
+        public event Action<Guid, ChannelSummaryResponse> MessageDeleted;
         public event Action<MessageResponse> MessageUpdated;
         public event Action<Guid> LastReadMessageUpdated;
 
         public event Action<MemberSummary, ChannelSummaryResponse> MemberJoined;
-        public event Action<MemberSummary> MemberLeft;
+        public event Action<MemberSummary, Guid> MemberLeft;
         public event Action<MemberSummary, Guid> MemberDeleted;
         public event Action<MemberSummary, Guid> YouAreDeleted;
 
-
-        public SignalRClient(string url)
+        #endregion
+        
+        public SignalRClient(string chatHubUrl)
         {
-            SourceUrl = url;
+            _chatHubUrl = chatHubUrl;
         }
         
         public async Task<ClientResponse> ConnectAsync(string accessToken)
         {
-            Console.WriteLine("Connecting to {0}", SourceUrl);
+            Console.WriteLine("Connecting to {0}", _chatHubUrl);
             _connection = new HubConnectionBuilder()
-                .WithUrl($"{SourceUrl}/chat", options =>
+                .WithUrl($"{_chatHubUrl}/chat", options =>
                 {
                     options.Headers.Add("Authorization", "Bearer " + accessToken);
                 })
+#if DEBUG
+                .ConfigureLogging(logging =>
+                {
+                    logging.SetMinimumLevel(LogLevel.Trace);
+                    logging.AddConsole();
+                })
+#endif
                 .Build();
-
-            Console.CancelKeyPress += (sender, a) =>
-            {
-                a.Cancel = true;
-                _connection.DisposeAsync().GetAwaiter().GetResult();
-            };
 
             _connection.Closed += e =>
             {
                 Console.WriteLine("Connection closed...");
+                Disconnected?.Invoke();
                 return Task.CompletedTask;
             };
 
-            SubscribeToEvents();
-
-            // Handle the connected connection
-            while (true)
+            await _connection.StartAsync().ConfigureAwait(false);
+            Console.WriteLine("Connected to {0}", _chatHubUrl);
+            _accessTokenExpiredSubscription?.Dispose();
+            _accessTokenExpiredSubscription = _connection.On<string>(ClientEvents.AccessTokenExpired, requestId =>
             {
-                try
-                {
-                    await _connection.StartAsync();
-                    Console.WriteLine("Connected to {0}", SourceUrl);
-                    break;
-                }
-                catch (IOException ex)
-                {
-                    // Process being shutdown
-                    Console.WriteLine(ex);
-                    break;
-                }
-                catch (OperationCanceledException ex)
-                {
-                    // The connection closed
-                    Console.WriteLine(ex);
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    // Send could have failed because the connection closed
-                    Console.WriteLine(ex);
-                    Console.WriteLine("Failed to connect, trying again in 5000(ms)");
-                    await Task.Delay(5000);
-                }
-            }
+                AccessTokenExpired?.Invoke();
+            });
 
-            var client = await _connection.InvokeAsync<ClientResponse>(AddClientCommandName);
+            var client = await _connection.InvokeAsync<ClientResponse>(ServerMethods.AddClientAsync);
+
+            SubscribeToEvents();
+            
             return client;
         }
 
         #region Channel
         
-        public async Task<ChannelSummaryResponse> CreateChannelAsync(CreateChannelRequest model)
+        public Task<ChannelSummaryResponse> CreateChannelAsync(CreateChannelRequest request)
         {
-            return await _connection.InvokeAsync<ChannelSummaryResponse>(CreateChannelCommandName, model);
+            return SendAndHandleExceptionsAsync<ChannelSummaryResponse>(ServerMethods.CreateChannelAsync, request);
         }
 
-        public async Task<ChannelSummaryResponse> CreateDirectChannelAsync(CreateDirectChannelRequest model)
+        public Task<ChannelSummaryResponse> CreateDirectChannelAsync(CreateDirectChannelRequest request)
         {
-            return await _connection.InvokeAsync<ChannelSummaryResponse>(CreateDirectChannelCommandName, model);
+            return SendAndHandleExceptionsAsync<ChannelSummaryResponse>(ServerMethods.CreateDirectChannelAsync, request);
         }
 
-        public async Task<ChannelSummaryResponse> UpdateChannelAsync(UpdateChannelRequest request)
+        public Task<ChannelSummaryResponse> UpdateChannelAsync(UpdateChannelRequest request)
         {
-            return await _connection.InvokeAsync<ChannelSummaryResponse>(UpdateChannelCommandName, request);
+            return SendAndHandleExceptionsAsync<ChannelSummaryResponse>(ServerMethods.UpdateChannelAsync, request);
         }
 
-        public async Task MuteChannelAsync(MuteChannelRequest request)
+        public Task MuteChannelAsync(MuteChannelRequest request)
         {
-            await _connection.InvokeAsync(MuteChannelCommandName, request);
+            return SendAndHandleExceptionsAsync(ServerMethods.MuteChannelAsync, request);
         }
 
-        public async Task PinChannelAsync(PinChannelRequest request)
+        public Task PinChannelAsync(PinChannelRequest request)
         {
-            await _connection.InvokeAsync(PinChannelCommandName, request);
+            return SendAndHandleExceptionsAsync(ServerMethods.PinChannelAsync, request);
         }
 
-        public async Task CloseChannelAsync(ChannelRequest request)
+        public Task CloseChannelAsync(ChannelRequest request)
         {
-            await _connection.InvokeAsync(CloseChannelCommandName, request);
+            return SendAndHandleExceptionsAsync(ServerMethods.CloseChannelAsync, request);
         }
 
-        public async Task JoinToChannelAsync(ChannelRequest model)
+        public Task JoinToChannelAsync(ChannelRequest request)
         {
-            await _connection.InvokeAsync(JoinToChannelCommandName, model);
+            return SendAndHandleExceptionsAsync(ServerMethods.JoinToChannelAsync, request);
         }
 
-        public async Task LeaveChannelAsync(ChannelRequest model)
+        public Task LeaveChannelAsync(ChannelRequest request)
         {
-            await _connection.InvokeAsync(LeaveChannelCommandName, model);
+            return SendAndHandleExceptionsAsync(ServerMethods.LeaveChannelAsync, request);
         }
 
         #endregion
 
         #region Message
 
-        public async Task<MessageResponse> AddMessageAsync(AddMessageRequest request)
+        public Task<MessageResponse> AddMessageAsync(AddMessageRequest request)
         {
-            return await _connection.InvokeAsync<MessageResponse>(AddMessageCommandName, request);
+            return SendAndHandleExceptionsAsync<MessageResponse>(ServerMethods.AddMessageAsync, request);
         }
 
-        public async Task DeleteMessageAsync(DeleteMessageRequest model)
+        public Task DeleteMessageAsync(DeleteMessageRequest request)
         {
-            await _connection.InvokeAsync(DeleteMessageCommandName, model);
+            return SendAndHandleExceptionsAsync(ServerMethods.DeleteMessageAsync, request);
         }
 
-        public async Task UpdateMessageAsync(UpdateMessageRequest request)
+        public Task UpdateMessageAsync(UpdateMessageRequest request)
         {
-            await _connection.InvokeAsync<MessageResponse>(UpdateMessageCommandName, request);
+            return SendAndHandleExceptionsAsync(ServerMethods.UpdateMessageAsync, request);
 
         }
 
-        public async Task MarkAsReadMessageAsync(SetLastReadMessageRequest request)
+        public Task MarkAsReadMessageAsync(SetLastReadMessageRequest request)
         {
-            await _connection.InvokeAsync(MarkAsReadMessageCommandName, request);
+            return SendAndHandleExceptionsAsync(ServerMethods.MarkAsReadMessageAsync, request);
         }
 
         #endregion
@@ -188,111 +163,203 @@ namespace Softeq.NetKit.Chat.SignalRClient
 
         public async Task<ClientResponse> GetClientAsync()
         {
-            return await _connection.InvokeAsync<ClientResponse>(GetClientCommandName);
+            return await _connection.InvokeAsync<ClientResponse>(ServerMethods.GetClientAsync).ConfigureAwait(false);
         }
 
-        public async Task InviteMemberAsync(InviteMemberRequest model)
+        public Task InviteMemberAsync(InviteMemberRequest request)
         {
-            await _connection.InvokeAsync(InviteMemberCommandName, model);
+            return SendAndHandleExceptionsAsync(ServerMethods.InviteMemberAsync, request);
         }
 
-        public async Task DeleteMemberAsync(DeleteMemberRequest request)
+        public Task DeleteMemberAsync(DeleteMemberRequest request)
         {
-            await _connection.InvokeAsync(DeleteMemberCommandName, request);
+            return SendAndHandleExceptionsAsync(ServerMethods.DeleteMemberAsync, request);
         }
 
-        public async Task InviteMultipleMembersAsync(InviteMultipleMembersRequest request)
+        public Task InviteMultipleMembersAsync(InviteMultipleMembersRequest request)
         {
-            await _connection.InvokeAsync(InviteMultipleMembersCommandName, request);
+            return SendAndHandleExceptionsAsync(ServerMethods.InviteMultipleMembersAsync, request);
         }
 
         #endregion
 
+        private async Task SendAndHandleExceptionsAsync(string methodName, BaseRequest request)
+        {
+            var tcs = new TaskCompletionSource<bool>();
+            var requestId = Guid.NewGuid().ToString();
+
+            CreateExceptionSubscription(requestId, tcs);
+            CreateValidationFailedSubscription(requestId, tcs);
+
+            IDisposable successSubscription = null;
+            successSubscription = _connection.On<string>(ClientEvents.RequestSuccess, id =>
+            {
+                if (id == requestId)
+                {
+                    successSubscription.Dispose();
+                    tcs.SetResult(true);
+                }
+            });
+
+            request.RequestId = requestId;
+            await _connection.InvokeAsync(methodName, request).ConfigureAwait(false);
+            await tcs.Task.ConfigureAwait(false);
+        }
+
+        private async Task<T> SendAndHandleExceptionsAsync<T>(string methodName, BaseRequest request)
+        {
+            var tcs = new TaskCompletionSource<T>();
+            var requestId = Guid.NewGuid().ToString();
+
+            CreateExceptionSubscription(requestId, tcs);
+            CreateValidationFailedSubscription(requestId, tcs);
+
+            IDisposable successSubscription = null;
+            var isCallEnded = false;
+            var result = default(T);
+            successSubscription = _connection.On<string>(ClientEvents.RequestSuccess, id =>
+            {
+                if (id == requestId)
+                {
+                    successSubscription.Dispose();
+                    if (isCallEnded)
+                    {
+                        tcs.SetResult(result);
+                    }
+                    else
+                    {
+                        isCallEnded = true;
+                    }
+                }
+            });
+
+            request.RequestId = requestId;
+            result = await _connection.InvokeAsync<T>(methodName, request).ConfigureAwait(false);
+
+            if (isCallEnded)
+            {
+                return result;
+            }
+            isCallEnded = true;
+            return await tcs.Task.ConfigureAwait(false);
+        }
+
+        private void CreateExceptionSubscription<T>(string requestId, TaskCompletionSource<T> tcs)
+        {
+            IDisposable exceptionSubscription = null;
+            exceptionSubscription = _connection.On<Exception, string>(ClientEvents.ExceptionOccurred,
+                (ex, id) =>
+                {
+                    if (id == requestId)
+                    {
+                        exceptionSubscription.Dispose();
+                        tcs.SetException(ex);
+                    }
+                });
+        }
+
+        private void CreateValidationFailedSubscription<T>(string requestId, TaskCompletionSource<T> tcs)
+        {
+            IDisposable validationFailedSubscription = null;
+            validationFailedSubscription = _connection.On<IEnumerable<ValidationErrorsResponse>, string>(
+                ClientEvents.RequestValidationFailed,
+                (errors, id) =>
+                {
+                    if (id == requestId)
+                    {
+                        validationFailedSubscription.Dispose();
+                        tcs.SetException(new ChatValidationException(errors.Select(x => x.ErrorMessage).ToList()));
+                    }
+                });
+        }
+
         public async Task Disconnect()
         {
-            await _connection.InvokeAsync(DeleteClientCommandName);
-            await _connection.StopAsync();
+            await _connection.StopAsync().ConfigureAwait(false);
         }
 
         private void SubscribeToEvents()
         {
+            _subscriptions.Apply(x => x.Dispose());
+            _subscriptions.Clear();
+
             #region Channel
 
-            _connection.On<ChannelSummaryResponse>(ClientEvents.ChannelAdded, channel =>
-            {
-                Execute(ChannelAdded, channelCreated => channelCreated(channel));
-            });
+            _subscriptions.Add(_connection.On<ChannelSummaryResponse>(ClientEvents.ChannelAdded,
+                channel =>
+                {
+                    ChannelAdded?.Invoke(channel);
+                }));
 
-            _connection.On<ChannelSummaryResponse>(ClientEvents.ChannelUpdated, channel =>
-            {
-                Execute(ChannelUpdated, channelUpdated => channelUpdated(channel));
-            });
+            _subscriptions.Add(_connection.On<ChannelSummaryResponse>(ClientEvents.ChannelUpdated, 
+                channel =>
+                {
+                    ChannelUpdated?.Invoke(channel);
+                }));
 
-            _connection.On<ChannelSummaryResponse>(ClientEvents.ChannelClosed, channel =>
-            {
-                Execute(ChannelClosed, channelClosed => channelClosed(channel));
-            });
+            _subscriptions.Add(_connection.On<ChannelSummaryResponse>(ClientEvents.ChannelClosed,
+                channel =>
+                {
+                    ChannelClosed?.Invoke(channel);
+                }));
 
             #endregion
 
             #region Message
 
-            _connection.On<MessageResponse>(ClientEvents.MessageAdded, message =>
-            {
-                Execute(MessageAdded, messageCreated => messageCreated(message));
-            });
+            _subscriptions.Add(_connection.On<MessageResponse>(ClientEvents.MessageAdded,
+                message =>
+                {
+                    MessageAdded?.Invoke(message);
+                }));
 
-            _connection.On<MessageResponse>(ClientEvents.MessageUpdated, message =>
-            {
-                Execute(MessageUpdated, messageUpdated => messageUpdated(message));
-            });
+            _subscriptions.Add(_connection.On<MessageResponse>(ClientEvents.MessageUpdated,
+                message =>
+                {
+                    MessageUpdated?.Invoke(message);
+                }));
 
-            _connection.On<MessageResponse>(ClientEvents.MessageDeleted, message =>
-            {
-                Execute(MessageDeleted, messageDeleted => messageDeleted(message));
-            });
+            _subscriptions.Add(_connection.On<Guid, ChannelSummaryResponse>(ClientEvents.MessageDeleted,
+                (deletedMessageId, updatedChannelSummary) =>
+                {
+                    MessageDeleted?.Invoke(deletedMessageId, updatedChannelSummary);
+                }));
 
-            _connection.On<Guid>(ClientEvents.LastReadMessageChanged, channelId =>
-            {
-                Execute(LastReadMessageUpdated, lastReadMessageUpdated => lastReadMessageUpdated(channelId));
-            });
+            _subscriptions.Add(_connection.On<Guid>(ClientEvents.LastReadMessageChanged,
+                channelId =>
+                {
+                    LastReadMessageUpdated?.Invoke(channelId);
+                }));
 
             #endregion
 
             #region Member
 
-            _connection.On<MemberSummary, ChannelSummaryResponse>(ClientEvents.MemberJoined, (member, channel) =>
-            {
-                Execute(MemberJoined, memberJoined => memberJoined(member, channel));
-            });
+            _subscriptions.Add(_connection.On<MemberSummary, ChannelSummaryResponse>(ClientEvents.MemberJoined,
+                (member, channel) =>
+                {
+                    MemberJoined?.Invoke(member, channel);
+                }));
 
-            _connection.On<MemberSummary>(ClientEvents.MemberLeft, member =>
-            {
-                Execute(MemberLeft, memberLeft => memberLeft(member));
-            });
-
-            _connection.On<MemberSummary, Guid>(ClientEvents.MemberDeleted, (member, channelId) =>
-            {
-                Execute(MemberDeleted, memberDeleted => memberDeleted(member, channelId));
-            });
-
-            _connection.On<MemberSummary, Guid>(ClientEvents.YouAreDeleted, (member, channelId) =>
-            {
-                Execute(YouAreDeleted, youAreDeleted => youAreDeleted(member, channelId));
-            });
+            _subscriptions.Add(_connection.On<MemberSummary, Guid>(ClientEvents.MemberLeft,
+                (member, channelId) =>
+                {
+                    MemberLeft?.Invoke(member, channelId);
+                }));
+            
+            _subscriptions.Add(_connection.On<MemberSummary, Guid>(ClientEvents.MemberDeleted,
+                (member, channelId) =>
+                {
+                    MemberDeleted?.Invoke(member, channelId);
+                }));
+            
+            _subscriptions.Add(_connection.On<MemberSummary, Guid>(ClientEvents.YouAreDeleted,
+                (member, channelId) =>
+                {
+                    YouAreDeleted?.Invoke(member, channelId);
+                }));
 
             #endregion
-        }
-
-        private void Execute<T>(T handlers, Action<T> action) where T : class
-        {
-            Task.Factory.StartNew(() =>
-            {
-                if (handlers != null)
-                {
-                    action(handlers);
-                }
-            });
         }
     }
 }

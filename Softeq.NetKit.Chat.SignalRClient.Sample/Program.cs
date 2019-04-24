@@ -1,7 +1,6 @@
 ﻿// Developed by Softeq Development Corporation
 // http://www.softeq.com
 
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,6 +8,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json.Linq;
 using Softeq.NetKit.Chat.Common.Configuration;
 
 namespace Softeq.NetKit.Chat.SignalRClient.Sample
@@ -16,6 +16,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
     class Program
     {
         private const string EnvironmentVariableName = "ASPNETCORE_ENVIRONMENT";
+        private const string AuthTokenUrl = "connect/token";
 
         static void Main(string[] args)
         {
@@ -25,7 +26,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
                 .AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true)
                 .Build();
-
+            
             var authMicroserviceConfiguration = GetAuthMicroserviceConfiguration(configuration);
             var chatMicroserviceConfiguration = GetChatMicroserviceConfiguration(configuration);
 
@@ -45,10 +46,13 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
         {
             return new AuthMicroserviceConfiguration
             {
-                AuthUrl = configuration[ConfigurationSettings.AuthUrl],
+                Url = configuration[ConfigurationSettings.AuthUrl],
                 UserName = configuration[ConfigurationSettings.AuthUserName],
                 Password = configuration[ConfigurationSettings.AuthPassword],
-                InvitedUserName = configuration[ConfigurationSettings.AuthInvitedUserName]
+                InvitedUserName = configuration[ConfigurationSettings.AuthInvitedUserName],
+                ClientId = configuration[ConfigurationSettings.AuthIdentityClientId],
+                ClientSecret = configuration[ConfigurationSettings.AuthIdentityClientSecret],
+                Scope = configuration[ConfigurationSettings.AuthIdentityScope]
             };
         }
 
@@ -86,8 +90,6 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
                         break;
                     }
                 }
-                
-                await signalRClient.Disconnect();
             }
             catch (Exception ex)
             {
@@ -106,7 +108,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
                 case 0:
                     break;
                 case 1:
-                    await ExecuteCallManagementLogic(signalRClient, authMicroserviceConfiguration);
+                    await ExecuteChannelManagementLogic(signalRClient, authMicroserviceConfiguration);
                     Console.WriteLine("Testing has passed successfully.");
                     break;
                 case 2:
@@ -123,7 +125,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             }
         }
 
-        private static async Task ExecuteCallManagementLogic(SignalRClient signalRClient, AuthMicroserviceConfiguration authMicroserviceConfiguration)
+        private static async Task ExecuteChannelManagementLogic(SignalRClient signalRClient, AuthMicroserviceConfiguration authMicroserviceConfiguration)
         {
             await ConnectAsync(authMicroserviceConfiguration, signalRClient);
             var client = await HubCommands.GetClientAsync(signalRClient);
@@ -140,6 +142,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             await HubCommands.JoinToChannelAsync(signalRClient, secondChannel.Id);
             await HubCommands.LeaveChannelAsync(signalRClient, secondChannel.Id);
             await HubCommands.CreateDirectChannelAsync(signalRClient, client.MemberId);
+            await signalRClient.Disconnect();
         }
 
         private static async Task ExecuteMessageManagementLogic(SignalRClient signalRClient, AuthMicroserviceConfiguration authMicroserviceConfiguration)
@@ -150,6 +153,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             await HubCommands.SetLastReadMessageAsync(signalRClient, channel.Id, message.Id);
             await HubCommands.UpdateMessageAsync(signalRClient, message.Id);
             await HubCommands.DeleteMessageAsync(signalRClient, channel.Id, message.Id);
+            await signalRClient.Disconnect();
         }
 
         private static async Task ExecuteMembersManagementLogic(SignalRClient signalRClient, AuthMicroserviceConfiguration authMicroserviceConfiguration)
@@ -167,38 +171,39 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             await HubCommands.InviteMemberAsync(signalRClient, channel.Id, client.MemberId);
             await HubCommands.DeleteMemberAsync(signalRClient, channel.Id, client.MemberId);
             await HubCommands.InviteMultipleMembersAsync(signalRClient, channel.Id, client.MemberId);
+            await signalRClient.Disconnect();
         }
 
         private static async Task ConnectAsync(AuthMicroserviceConfiguration authMicroserviceConfiguration, SignalRClient client)
         {
-            var token = await GetJwtTokenAsync(authMicroserviceConfiguration.Password, authMicroserviceConfiguration.UserName, authMicroserviceConfiguration.AuthUrl);
+            var token = await GetJwtTokenAsync(authMicroserviceConfiguration);
             await client.ConnectAsync(token);
 
             Console.WriteLine("Logged on successfully.");
             Console.WriteLine();
         }
 
-        private static async Task<string> GetJwtTokenAsync(string password, string userName, string authServerUrl)
+        private static async Task<string> GetJwtTokenAsync(AuthMicroserviceConfiguration authMicroserviceConfiguration)
         {
             var httpClient = new HttpClient();
 
             var values = new Dictionary<string, string>
             {
-                { "grant_type", "password" },
-                { "password", password },
-                { "username", userName },
-                { "scope", "api" },
-                { "client_id", "ro.client" },
-                { "client_secret", "secret" }
+                { HttpConstants.GrantTypeKey, HttpConstants.GrantTypeValue },
+                { HttpConstants.PasswordKey, authMicroserviceConfiguration.Password },
+                { HttpConstants.UserNameKey, authMicroserviceConfiguration.UserName },
+                { HttpConstants.ScopeKey, authMicroserviceConfiguration.Scope },
+                { HttpConstants.ClientIdKey, authMicroserviceConfiguration.ClientId },
+                { HttpConstants.ClientSecretKey, authMicroserviceConfiguration.ClientSecret }
             };
 
             var content = new FormUrlEncodedContent(values);
 
-            var response = await httpClient.PostAsync($"{authServerUrl}/connect/token", content);
+            var response = await httpClient.PostAsync($"{authMicroserviceConfiguration.Url}/{AuthTokenUrl}", content);
 
             var responseString = await response.Content.ReadAsStringAsync();
             var json = JObject.Parse(responseString);
-            var accessToken = json.Value<string>("access_token");
+            var accessToken = json.Value<string>(HttpConstants.AccessTokenKey);
 
             return accessToken;
         }
