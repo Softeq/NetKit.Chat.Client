@@ -20,7 +20,12 @@ Service tests the following types of functional:
     "Url": "[auth app service url]",
     "UserName": "[first user email that exist in Auth database]",
     "Password": "[first user's password]",
-    "InvitedUserName": "[second user email that exist in Auth database]"
+    "InvitedUserName": "[second user email that exist in Auth database]",
+    "Identity": {
+      "ClientId": "[identity server client id]",
+      "ClientSecret": "[identity server client secret]",
+      "Scope": "[identity server allowed scope]" 
+    } 
   }
 }
 ```
