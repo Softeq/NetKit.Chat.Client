@@ -14,7 +14,7 @@ using Softeq.NetKit.Chat.SignalRClient.DTOs.Message.Request;
 
 namespace Softeq.NetKit.Chat.SignalRClient.Sample
 {
-    public static class HubCommands1
+    public static class HubCommands
     {
         #region Channel Hub Commands
 
