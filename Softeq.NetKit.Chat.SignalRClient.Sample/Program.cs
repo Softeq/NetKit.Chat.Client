@@ -154,7 +154,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             var message = await HubCommands.AddMessageAsync(signalRClient, channel.Id);
             await HubCommands.SetLastReadMessageAsync(signalRClient, channel.Id, message.Id);
             await HubCommands.UpdateMessageAsync(signalRClient, message.Id);
-            await HubCommands.DeleteMessageAsync(signalRClient, channel.Id, message.Id);
+            await HubCommands.DeleteMessageAsync(signalRClient, message.Id);
             await signalRClient.DisconnectAsync();
         }
 
