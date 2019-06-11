@@ -27,12 +27,14 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             var createChannelRequest = new SignalRRequest<CreateChannelRequest>
             {
                 RequestId = Guid.NewGuid().ToString(),
-                Request = {AllowedMembers = new List<string>(),
-                Description = "test",
-                Name = groupName,
-                PhotoUrl = "https://softeqnonamemessaging.blob.core.windows.net/temp/1000_abf08299411.jpg",
-                Type = ChannelType.Public,
-                WelcomeMessage = "Hi test"
+                Request = new CreateChannelRequest
+                {
+                    AllowedMembers = new List<string>(),
+                    Description = "test",
+                    Name = groupName,
+                    PhotoUrl = "https://softeqnonamemessaging.blob.core.windows.net/temp/1000_abf08299411.jpg",
+                    Type = ChannelType.Public,
+                    WelcomeMessage = "Hi test"
                 }
             };
 
@@ -51,7 +53,10 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             var createDirectChannelRequest = new SignalRRequest<CreateDirectChannelRequest>()
             {
                 RequestId = Guid.NewGuid().ToString(),
-                Request = { MemberId = memberId }
+                Request = new CreateDirectChannelRequest()
+                {
+                    MemberId = memberId
+                }
             };
 
             Console.WriteLine("Creating a direct channel.");
@@ -68,7 +73,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             var updateChannelRequest = new SignalRRequest<UpdateChannelRequest>
             {
                 RequestId = Guid.NewGuid().ToString(),
-                Request =
+                Request = new UpdateChannelRequest()
                 {
                     ChannelId = channelId,
                     Description = "test",
@@ -92,7 +97,8 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             var muteChannelRequest = new SignalRRequest<MuteChannelRequest>
             {
                 RequestId = Guid.NewGuid().ToString(),
-                Request = { ChannelId = channelId, IsMuted = true }
+                Request = new MuteChannelRequest
+                { ChannelId = channelId, IsMuted = true }
             };
 
             Console.WriteLine("Mutting the channel");
@@ -106,7 +112,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             // Close the channel called test
             var pinChannelRequest = new SignalRRequest<PinChannelRequest>
             {
-                Request = { ChannelId = channelId, IsPinned = true },
+                Request = new PinChannelRequest() { ChannelId = channelId, IsPinned = true },
                 RequestId = Guid.NewGuid().ToString()
             };
 
@@ -121,7 +127,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             // Close the channel called test
             var closeChannelRequest = new SignalRRequest<ChannelRequest>
             {
-                Request = { ChannelId = channelId },
+                Request = new ChannelRequest() { ChannelId = channelId },
                 RequestId = Guid.NewGuid().ToString()
             };
 
@@ -137,7 +143,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             var channelRequestModel = new SignalRRequest<ChannelRequest>
             {
                 RequestId = Guid.NewGuid().ToString(),
-                Request = { ChannelId = channelId }
+                Request = new ChannelRequest() { ChannelId = channelId }
             };
 
             Console.WriteLine("Join to the channel");
@@ -151,7 +157,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             // Leave the channel call test
             var channelRequestModel = new SignalRRequest<ChannelRequest>
             {
-                Request = { ChannelId = channelId },
+                Request = new ChannelRequest() { ChannelId = channelId },
                 RequestId = Guid.NewGuid().ToString()
             };
 
@@ -172,7 +178,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             var createMessageRequest = new SignalRRequest<AddMessageRequest>
             {
                 RequestId = Guid.NewGuid().ToString(),
-                Request = { Body = "test", ChannelId = channelId, Type = MessageType.Default }
+                Request = new AddMessageRequest { Body = "test", ChannelId = channelId, Type = MessageType.Default }
             };
 
             Console.WriteLine("Creating the message");
@@ -188,7 +194,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             // Set last read message test
             var setLastReadMessageRequest = new SignalRRequest<SetLastReadMessageRequest>
             {
-                Request = { ChannelId = channelId, MessageId = messageId },
+                Request = new SetLastReadMessageRequest() { ChannelId = channelId, MessageId = messageId },
                 RequestId = Guid.NewGuid().ToString()
             };
 
@@ -203,7 +209,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             // Update the message called test
             var updateMessageRequest = new SignalRRequest<UpdateMessageRequest>
             {
-                Request = { MessageId = messageId, Body = Guid.NewGuid() + "test", },
+                Request = new UpdateMessageRequest() { MessageId = messageId, Body = Guid.NewGuid() + "test", },
                 RequestId = Guid.NewGuid().ToString(),
             };
 
@@ -219,7 +225,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             var deleteMessageRequest = new SignalRRequest<DeleteMessageRequest>()
             {
                 RequestId = Guid.NewGuid().ToString(),
-                Request = { MessageId = messageId }
+                Request = new DeleteMessageRequest { MessageId = messageId }
             };
 
             Console.WriteLine("Deleting the message");
@@ -235,20 +241,31 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
         public static async Task<ClientResponse> GetClientAsync(SignalRClient signalRClient)
         {
             Console.WriteLine("Getting the client");
-            return await signalRClient.GetClientAsync();
+
+            try
+            {
+                var res = await signalRClient.GetClientAsync();
+
+                return res;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
         }
 
         public static async Task InviteMemberAsync(SignalRClient signalRClient, Guid channelId, Guid memberId)
         {
             // Invite member test
-            var deleteMessageRequest = new SignalRRequest<InviteMemberRequest>()
+            var inviteMessageRequest = new SignalRRequest<InviteMemberRequest>()
             {
                 RequestId = Guid.NewGuid().ToString(),
-                Request = { ChannelId = channelId, MemberId = memberId }
+                Request = new InviteMemberRequest { ChannelId = channelId, MemberId = memberId }
             };
 
             Console.WriteLine("Inviting a member.");
-            await signalRClient.InviteMemberAsync(deleteMessageRequest);
+            await signalRClient.InviteMemberAsync(inviteMessageRequest);
             Console.WriteLine("Member was invited.");
             Console.WriteLine();
         }
@@ -259,7 +276,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             var deleteMessageRequest = new SignalRRequest<DeleteMemberRequest>()
             {
                 RequestId = Guid.NewGuid().ToString(),
-                Request = { ChannelId = channelId, MemberId = memberId }
+                Request = new DeleteMemberRequest() { ChannelId = channelId, MemberId = memberId }
             };
 
             Console.WriteLine("Deleting a member.");
@@ -274,7 +291,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             var inviteMultipleMembersRequest = new SignalRRequest<InviteMultipleMembersRequest>()
             {
                 RequestId = Guid.NewGuid().ToString(),
-                Request = { ChannelId = channelId, InvitedMembersIds = new List<Guid>() }
+                Request = new InviteMultipleMembersRequest() { ChannelId = channelId, InvitedMembersIds = new List<Guid> { memberId } }
             };
 
             Console.WriteLine("Inviting members.");
