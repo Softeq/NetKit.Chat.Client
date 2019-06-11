@@ -7,10 +7,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Softeq.NetKit.Chat.SignalRC
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Softeq.NetKit.Chat.Common", "Softeq.NetKit.Chat.Common\Softeq.NetKit.Chat.Common.csproj", "{70E97E83-BBC6-46C7-84A8-74CA165D9D06}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Softeq.NetKit.Chat.SignalRClient", "..\Client.SDK\Softeq.NetKit.Chat.SignalRClient.csproj", "{254D3F6E-341F-4588-AB98-434014D5279A}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Softeq.NetKit.Chat.Client.SDK", "..\..\NetKit.Chat.Client.SDK.REST\NetKit.Chat.Client.SDK.REST\NetKit.Chat.Client.SDK.REST\Softeq.NetKit.Chat.Client.SDK.csproj", "{FFC73765-3679-4BA2-9D93-124B004756E0}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -25,14 +21,6 @@ Global
 		{70E97E83-BBC6-46C7-84A8-74CA165D9D06}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{70E97E83-BBC6-46C7-84A8-74CA165D9D06}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{70E97E83-BBC6-46C7-84A8-74CA165D9D06}.Release|Any CPU.Build.0 = Release|Any CPU
-		{254D3F6E-341F-4588-AB98-434014D5279A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{254D3F6E-341F-4588-AB98-434014D5279A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{254D3F6E-341F-4588-AB98-434014D5279A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{254D3F6E-341F-4588-AB98-434014D5279A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FFC73765-3679-4BA2-9D93-124B004756E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FFC73765-3679-4BA2-9D93-124B004756E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FFC73765-3679-4BA2-9D93-124B004756E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FFC73765-3679-4BA2-9D93-124B004756E0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
