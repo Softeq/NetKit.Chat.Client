@@ -11,7 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
 using Softeq.NetKit.Chat.Common.Configuration;
 
-namespace Softeq.NetKit.Chat.SignalRClient.Sample
+namespace Softeq.NetKit.Chat.ConsoleClient
 {
     class Program
     {
@@ -37,7 +37,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
 
                 try
                 {
-                    var signalRClient = new SignalRClient(_chatMicroserviceConfiguration.ChatUrl, GetJwtTokenAsync);
+                    var signalRClient = new SignalRClient.SignalRClient(_chatMicroserviceConfiguration.ChatUrl, GetJwtTokenAsync);
                     var manualResetEventSlim = new ManualResetEventSlim();
 
                     var runningClientTask = RunClientAsync(signalRClient, manualResetEventSlim);
@@ -76,7 +76,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             };
         }
 
-        private static async Task RunClientAsync(SignalRClient signalRClient, ManualResetEventSlim wh)
+        private static async Task RunClientAsync(SignalRClient.SignalRClient signalRClient, ManualResetEventSlim wh)
         {
             try
             {
@@ -113,7 +113,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             }
         }
 
-        private static async Task HandleChoiceNumberAsync(int choiceNumber, SignalRClient signalRClient)
+        private static async Task HandleChoiceNumberAsync(int choiceNumber, SignalRClient.SignalRClient signalRClient)
         {
             switch (choiceNumber)
             {
@@ -137,7 +137,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             }
         }
 
-        private static async Task ExecuteChannelManagementLogic(SignalRClient signalRClient)
+        private static async Task ExecuteChannelManagementLogic(SignalRClient.SignalRClient signalRClient)
         {
             await ConnectAsync(signalRClient);
 
@@ -181,7 +181,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             await signalRClient.DisconnectAsync();
         }
 
-        private static async Task ExecuteMessageManagementLogic(SignalRClient signalRClient)
+        private static async Task ExecuteMessageManagementLogic(SignalRClient.SignalRClient signalRClient)
         {
             await ConnectAsync(signalRClient);
             var channel = await HubCommands.CreateChannelAsync(signalRClient);
@@ -192,7 +192,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             await signalRClient.DisconnectAsync();
         }
 
-        private static async Task ExecuteMembersManagementLogic(SignalRClient signalRClient)
+        private static async Task ExecuteMembersManagementLogic(SignalRClient.SignalRClient signalRClient)
         {
             var userName = _authMicroserviceConfiguration.UserName;
             var invitedUserName = _authMicroserviceConfiguration.InvitedUserName;
@@ -214,7 +214,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             await signalRClient.DisconnectAsync();
         }
 
-        private static async Task ConnectAsync(SignalRClient client)
+        private static async Task ConnectAsync(SignalRClient.SignalRClient client)
         {
             await client.ConnectAsync();
 
