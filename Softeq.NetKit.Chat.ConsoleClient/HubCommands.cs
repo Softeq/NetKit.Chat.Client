@@ -4,34 +4,33 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Softeq.NetKit.Chat.SignalRClient.DTOs.Channel;
-using Softeq.NetKit.Chat.SignalRClient.DTOs.Channel.Request;
-using Softeq.NetKit.Chat.SignalRClient.DTOs.Channel.Response;
-using Softeq.NetKit.Chat.SignalRClient.DTOs.Client.Response;
-using Softeq.NetKit.Chat.SignalRClient.DTOs.Member.Request;
-using Softeq.NetKit.Chat.SignalRClient.DTOs.Message;
-using Softeq.NetKit.Chat.SignalRClient.DTOs.Message.Request;
+using Softeq.NetKit.Chat.TransportModels.Enums;
+using Softeq.NetKit.Chat.TransportModels.Models.CommonModels.Request.Channel;
+using Softeq.NetKit.Chat.TransportModels.Models.CommonModels.Request.Member;
+using Softeq.NetKit.Chat.TransportModels.Models.CommonModels.Request.Message;
+using Softeq.NetKit.Chat.TransportModels.Models.CommonModels.Response.Channel;
+using Softeq.NetKit.Chat.TransportModels.Models.CommonModels.Response.Message;
+using Softeq.NetKit.Chat.TransportModels.Models.SignalRModels.Client;
 
-namespace Softeq.NetKit.Chat.SignalRClient.Sample
+namespace Softeq.NetKit.Chat.ConsoleClient
 {
     public static class HubCommands
     {
         #region Channel Hub Commands
 
-        public static async Task<ChannelSummaryResponse> CreateChannelAsync(SignalRClient client)
+        public static async Task<ChannelSummaryResponse> CreateChannelAsync(SignalRClient.SignalRClient client)
         {
             string groupName = Guid.NewGuid() + "test";
 
             // Create the channel called test
             var createChannelRequest = new CreateChannelRequest
             {
-                Closed = false,
+                AllowedMembers = new List<string>(),
+                Description = "test",
                 Name = groupName,
-                Topic = "test",
-                WelcomeMessage = "test",
+                PhotoUrl = "https://softeqnonamemessaging.blob.core.windows.net/temp/1000_abf08299411.jpg",
                 Type = ChannelType.Public,
-                RequestId = Guid.NewGuid().ToString(),
-                PhotoUrl = "https://softeqnonamemessaging.blob.core.windows.net/temp/1000_abf08299411.jpg"
+                WelcomeMessage = "Hi test"
             };
 
             Console.WriteLine("Creating the channel.");
@@ -42,15 +41,11 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             return createdChannel;
         }
 
-        public static async Task<ChannelSummaryResponse> CreateDirectChannelAsync(SignalRClient client, Guid memberId)
+        public static async Task<ChannelSummaryResponse> CreateDirectChannelAsync(SignalRClient.SignalRClient client, Guid memberId)
         {
-            string groupName = Guid.NewGuid() + "test";
-
-            // Create a direct channel called test
             var createDirectChannelRequest = new CreateDirectChannelRequest
             {
-                MemberId = memberId,
-                RequestId = Guid.NewGuid().ToString(),
+                MemberId = memberId
             };
 
             Console.WriteLine("Creating a direct channel.");
@@ -61,18 +56,15 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             return createdChannel;
         }
 
-        public static async Task<ChannelSummaryResponse> UpdateChannelAsync(SignalRClient signalRClient, Guid channelId)
+        public static async Task<ChannelSummaryResponse> UpdateChannelAsync(SignalRClient.SignalRClient signalRClient, Guid channelId)
         {
             // Update the channel called test
             var updateChannelRequest = new UpdateChannelRequest
             {
                 ChannelId = channelId,
+                Description = "test",
+                WelcomeMessage = "Hi test",
                 Name = Guid.NewGuid() + "test",
-                Topic = "test",
-                WelcomeMessage = "test",
-                Type = ChannelType.Public,
-                AllowedMembers = new List<Guid>(),
-                RequestId = Guid.NewGuid().ToString(),
                 PhotoUrl = "https://softeqnonamemessaging.blob.core.windows.net/temp/1000_abf08299411.jpg"
             };
 
@@ -84,13 +76,12 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             return updatedChannel;
         }
 
-        public static async Task MuteChannelAsync(SignalRClient signalRClient, Guid channelId)
+        public static async Task MuteChannelAsync(SignalRClient.SignalRClient signalRClient, Guid channelId)
         {
             // Close the channel called test
             var muteChannelRequest = new MuteChannelRequest
             {
                 ChannelId = channelId,
-                RequestId = Guid.NewGuid().ToString(),
                 IsMuted = true
             };
 
@@ -100,13 +91,12 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             Console.WriteLine();
         }
 
-        public static async Task PinChannelAsync(SignalRClient signalRClient, Guid channelId)
+        public static async Task PinChannelAsync(SignalRClient.SignalRClient signalRClient, Guid channelId)
         {
             // Close the channel called test
-            var pinChannelRequest = new PinChannelRequest()
+            var pinChannelRequest = new PinChannelRequest
             {
                 ChannelId = channelId,
-                RequestId = Guid.NewGuid().ToString(),
                 IsPinned = true
             };
 
@@ -116,13 +106,12 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             Console.WriteLine();
         }
 
-        public static async Task CloseChannelAsync(SignalRClient signalRClient, Guid channelId)
+        public static async Task CloseChannelAsync(SignalRClient.SignalRClient signalRClient, Guid channelId)
         {
             // Close the channel called test
             var closeChannelRequest = new ChannelRequest
             {
-                ChannelId = channelId,
-                RequestId = Guid.NewGuid().ToString()
+                ChannelId = channelId
             };
 
             Console.WriteLine("Closing the channel");
@@ -131,13 +120,12 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             Console.WriteLine();
         }
 
-        public static async Task JoinToChannelAsync(SignalRClient signalRClient, Guid channelId)
+        public static async Task JoinToChannelAsync(SignalRClient.SignalRClient signalRClient, Guid channelId)
         {
             // Join to the channel call test
             var channelRequestModel = new ChannelRequest
             {
-                ChannelId = channelId,
-                RequestId = Guid.NewGuid().ToString()
+                ChannelId = channelId
             };
 
             Console.WriteLine("Join to the channel");
@@ -146,13 +134,12 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             Console.WriteLine();
         }
 
-        public static async Task LeaveChannelAsync(SignalRClient signalRClient, Guid channelId)
+        public static async Task LeaveChannelAsync(SignalRClient.SignalRClient signalRClient, Guid channelId)
         {
             // Leave the channel call test
             var channelRequestModel = new ChannelRequest
             {
-                ChannelId = channelId,
-                RequestId = Guid.NewGuid().ToString()
+                ChannelId = channelId
             };
 
             Console.WriteLine("Leave the channel");
@@ -165,16 +152,15 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
 
         #region Message Hub Commands
 
-        public static async Task<MessageResponse> AddMessageAsync(SignalRClient signalRClient, Guid channelId)
+        public static async Task<MessageResponse> AddMessageAsync(SignalRClient.SignalRClient signalRClient, Guid channelId)
         {
             // Create the message called test
+
             var createMessageRequest = new AddMessageRequest
             {
-                ChannelId = channelId,
                 Body = "test",
-                Type = MessageType.Default,
-                RequestId = Guid.NewGuid().ToString()
-
+                ChannelId = channelId,
+                Type = MessageType.Default
             };
 
             Console.WriteLine("Creating the message");
@@ -185,15 +171,13 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             return createdMessage;
         }
 
-        public static async Task SetLastReadMessageAsync(SignalRClient signalRClient, Guid channelId, Guid messageId)
+        public static async Task SetLastReadMessageAsync(SignalRClient.SignalRClient signalRClient, Guid channelId, Guid messageId)
         {
             // Set last read message test
             var setLastReadMessageRequest = new SetLastReadMessageRequest
             {
                 ChannelId = channelId,
-                MessageId = messageId,
-                RequestId = Guid.NewGuid().ToString()
-
+                MessageId = messageId
             };
 
             Console.WriteLine("Trying to mark message as read.");
@@ -202,16 +186,13 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             Console.WriteLine();
         }
 
-        public static async Task UpdateMessageAsync(SignalRClient signalRClient, Guid messageId)
+        public static async Task UpdateMessageAsync(SignalRClient.SignalRClient signalRClient, Guid messageId)
         {
             // Update the message called test
             var updateMessageRequest = new UpdateMessageRequest
             {
                 MessageId = messageId,
                 Body = Guid.NewGuid() + "test",
-                HtmlContent = Guid.NewGuid() + "test",
-                HtmlEncoded = false,
-                RequestId = Guid.NewGuid().ToString()
             };
 
             Console.WriteLine("Updating the message");
@@ -220,15 +201,14 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             Console.WriteLine();
         }
 
-        public static async Task DeleteMessageAsync(SignalRClient signalRClient, Guid channelId, Guid messageId)
+        public static async Task DeleteMessageAsync(SignalRClient.SignalRClient signalRClient, Guid messageId)
         {
             // // Delete the message called test
             var deleteMessageRequest = new DeleteMessageRequest
             {
-                ChannelId = channelId,
-                MessageId = messageId,
-                RequestId = Guid.NewGuid().ToString()
+                MessageId = messageId
             };
+
             Console.WriteLine("Deleting the message");
             await signalRClient.DeleteMessageAsync(deleteMessageRequest);
             Console.WriteLine("Message was deleted.");
@@ -239,51 +219,62 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
 
         #region Member Hub Commands
 
-        public static async Task<ClientResponse> GetClientAsync(SignalRClient signalRClient)
+        public static async Task<ClientResponse> GetClientAsync(SignalRClient.SignalRClient signalRClient)
         {
             Console.WriteLine("Getting the client");
-            return await signalRClient.GetClientAsync();
+
+            try
+            {
+                var res = await signalRClient.GetClientAsync();
+
+                return res;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
         }
 
-        public static async Task InviteMemberAsync(SignalRClient signalRClient, Guid channelId, Guid memberId)
+        public static async Task InviteMemberAsync(SignalRClient.SignalRClient signalRClient, Guid channelId, Guid memberId)
         {
             // Invite member test
-            var deleteMessageRequest = new InviteMemberRequest
+            var inviteMessageRequest = new InviteMemberRequest
             {
                 ChannelId = channelId,
-                MemberId = memberId,
-                RequestId = Guid.NewGuid().ToString()
+                MemberId = memberId
             };
+
             Console.WriteLine("Inviting a member.");
-            await signalRClient.InviteMemberAsync(deleteMessageRequest);
+            await signalRClient.InviteMemberAsync(inviteMessageRequest);
             Console.WriteLine("Member was invited.");
             Console.WriteLine();
         }
 
-        public static async Task DeleteMemberAsync(SignalRClient signalRClient, Guid channelId, Guid memberId)
+        public static async Task DeleteMemberAsync(SignalRClient.SignalRClient signalRClient, Guid channelId, Guid memberId)
         {
             // Invite member test
             var deleteMessageRequest = new DeleteMemberRequest
             {
                 ChannelId = channelId,
-                MemberId = memberId,
-                RequestId = Guid.NewGuid().ToString()
+                MemberId = memberId
             };
+
             Console.WriteLine("Deleting a member.");
             await signalRClient.DeleteMemberAsync(deleteMessageRequest);
             Console.WriteLine("Member was deleted.");
             Console.WriteLine();
         }
 
-        public static async Task InviteMultipleMembersAsync(SignalRClient signalRClient, Guid channelId, Guid memberId)
+        public static async Task InviteMultipleMembersAsync(SignalRClient.SignalRClient signalRClient, Guid channelId, Guid memberId)
         {
             // Invite member test
             var inviteMultipleMembersRequest = new InviteMultipleMembersRequest
             {
                 ChannelId = channelId,
-                InvitedMembersIds = new List<Guid> { memberId },
-                RequestId = Guid.NewGuid().ToString()
+                InvitedMembersIds = new List<Guid> { memberId }
             };
+
             Console.WriteLine("Inviting members.");
             await signalRClient.InviteMultipleMembersAsync(inviteMultipleMembersRequest);
             Console.WriteLine("Members were invited.");

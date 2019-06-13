@@ -11,7 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json.Linq;
 using Softeq.NetKit.Chat.Common.Configuration;
 
-namespace Softeq.NetKit.Chat.SignalRClient.Sample
+namespace Softeq.NetKit.Chat.ConsoleClient
 {
     class Program
     {
@@ -34,13 +34,23 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
 
             if (_authMicroserviceConfiguration != null && _chatMicroserviceConfiguration != null)
             {
-                var signalRClient = new SignalRClient(_chatMicroserviceConfiguration.ChatUrl, GetJwtTokenAsync);
-                var manualResetEventSlim = new ManualResetEventSlim();
 
-                var runningClientTask = RunClientAsync(signalRClient, manualResetEventSlim);
-                runningClientTask.Wait();
+                try
+                {
+                    var signalRClient = new SignalRClient.SignalRClient(_chatMicroserviceConfiguration.ChatUrl, GetJwtTokenAsync);
+                    var manualResetEventSlim = new ManualResetEventSlim();
 
-                manualResetEventSlim.Wait();
+                    var runningClientTask = RunClientAsync(signalRClient, manualResetEventSlim);
+                    runningClientTask.Wait();
+
+                    manualResetEventSlim.Wait();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
+                }
+
             }
         }
 
@@ -66,7 +76,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             };
         }
 
-        private static async Task RunClientAsync(SignalRClient signalRClient, ManualResetEventSlim wh)
+        private static async Task RunClientAsync(SignalRClient.SignalRClient signalRClient, ManualResetEventSlim wh)
         {
             try
             {
@@ -103,7 +113,7 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             }
         }
 
-        private static async Task HandleChoiceNumberAsync(int choiceNumber, SignalRClient signalRClient)
+        private static async Task HandleChoiceNumberAsync(int choiceNumber, SignalRClient.SignalRClient signalRClient)
         {
             switch (choiceNumber)
             {
@@ -127,56 +137,84 @@ namespace Softeq.NetKit.Chat.SignalRClient.Sample
             }
         }
 
-        private static async Task ExecuteChannelManagementLogic(SignalRClient signalRClient)
+        private static async Task ExecuteChannelManagementLogic(SignalRClient.SignalRClient signalRClient)
         {
             await ConnectAsync(signalRClient);
-            var client = await HubCommands.GetClientAsync(signalRClient);
+
             var channel = await HubCommands.CreateChannelAsync(signalRClient);
-            var secondChannel = await HubCommands.CreateChannelAsync(signalRClient);
+
+            // switch user
+            var userName = _authMicroserviceConfiguration.UserName;
+            var invitedUserName = _authMicroserviceConfiguration.InvitedUserName;
+
+            _authMicroserviceConfiguration.UserName = invitedUserName;
+            await ConnectAsync(signalRClient);
+
+            var secondMember = await HubCommands.GetClientAsync(signalRClient);
+
+            // switch user
+            _authMicroserviceConfiguration.UserName = userName;
+            _authMicroserviceConfiguration.InvitedUserName = invitedUserName;
+            await ConnectAsync(signalRClient);
+
+           var  client = await HubCommands.GetClientAsync(signalRClient);
+
+            await HubCommands.InviteMemberAsync(signalRClient, channel.Id, secondMember.MemberId);
+
             await HubCommands.UpdateChannelAsync(signalRClient, channel.Id);
             await HubCommands.MuteChannelAsync(signalRClient, channel.Id);
             await HubCommands.PinChannelAsync(signalRClient, channel.Id);
+
+            await HubCommands.DeleteMemberAsync(signalRClient, channel.Id, secondMember.MemberId);
+
             await HubCommands.CloseChannelAsync(signalRClient, channel.Id);
 
             // switch user
-            _authMicroserviceConfiguration.UserName = _authMicroserviceConfiguration.InvitedUserName;
+            _authMicroserviceConfiguration.UserName = invitedUserName;
             await ConnectAsync(signalRClient);
-            await HubCommands.JoinToChannelAsync(signalRClient, secondChannel.Id);
-            await HubCommands.LeaveChannelAsync(signalRClient, secondChannel.Id);
+
             await HubCommands.CreateDirectChannelAsync(signalRClient, client.MemberId);
+
+            _authMicroserviceConfiguration.UserName = userName;
+            _authMicroserviceConfiguration.InvitedUserName = invitedUserName;
+
             await signalRClient.DisconnectAsync();
         }
 
-        private static async Task ExecuteMessageManagementLogic(SignalRClient signalRClient)
+        private static async Task ExecuteMessageManagementLogic(SignalRClient.SignalRClient signalRClient)
         {
             await ConnectAsync(signalRClient);
             var channel = await HubCommands.CreateChannelAsync(signalRClient);
             var message = await HubCommands.AddMessageAsync(signalRClient, channel.Id);
             await HubCommands.SetLastReadMessageAsync(signalRClient, channel.Id, message.Id);
             await HubCommands.UpdateMessageAsync(signalRClient, message.Id);
-            await HubCommands.DeleteMessageAsync(signalRClient, channel.Id, message.Id);
+            await HubCommands.DeleteMessageAsync(signalRClient, message.Id);
             await signalRClient.DisconnectAsync();
         }
 
-        private static async Task ExecuteMembersManagementLogic(SignalRClient signalRClient)
+        private static async Task ExecuteMembersManagementLogic(SignalRClient.SignalRClient signalRClient)
         {
             var userName = _authMicroserviceConfiguration.UserName;
             var invitedUserName = _authMicroserviceConfiguration.InvitedUserName;
+
             _authMicroserviceConfiguration.UserName = invitedUserName;
             await ConnectAsync(signalRClient);
-            var client = await HubCommands.GetClientAsync(signalRClient);
 
-            // switch user
+            var secondMember = await HubCommands.GetClientAsync(signalRClient);
+
             _authMicroserviceConfiguration.UserName = userName;
+            _authMicroserviceConfiguration.InvitedUserName = invitedUserName;
             await ConnectAsync(signalRClient);
+
             var channel = await HubCommands.CreateChannelAsync(signalRClient);
-            await HubCommands.InviteMemberAsync(signalRClient, channel.Id, client.MemberId);
-            await HubCommands.DeleteMemberAsync(signalRClient, channel.Id, client.MemberId);
-            await HubCommands.InviteMultipleMembersAsync(signalRClient, channel.Id, client.MemberId);
+            await HubCommands.InviteMemberAsync(signalRClient, channel.Id, secondMember.MemberId);
+            await HubCommands.DeleteMemberAsync(signalRClient, channel.Id, secondMember.MemberId);
+            await HubCommands.InviteMultipleMembersAsync(signalRClient, channel.Id, secondMember.MemberId);
+            await HubCommands.DeleteMemberAsync(signalRClient, channel.Id, secondMember.MemberId);
             await signalRClient.DisconnectAsync();
         }
 
-        private static async Task ConnectAsync(SignalRClient client)
+        private static async Task ConnectAsync(SignalRClient.SignalRClient client)
         {
             await client.ConnectAsync();
 
