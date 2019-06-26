@@ -34,7 +34,6 @@ namespace Softeq.NetKit.Chat.ConsoleClient
 
             if (_authMicroserviceConfiguration != null && _chatMicroserviceConfiguration != null)
             {
-
                 try
                 {
                     var signalRClient = new SignalRClient.SignalRClient(_chatMicroserviceConfiguration.ChatUrl, GetJwtTokenAsync);
@@ -50,7 +49,6 @@ namespace Softeq.NetKit.Chat.ConsoleClient
                     Console.WriteLine(e);
                     throw;
                 }
-
             }
         }
 
@@ -157,7 +155,7 @@ namespace Softeq.NetKit.Chat.ConsoleClient
             _authMicroserviceConfiguration.InvitedUserName = invitedUserName;
             await ConnectAsync(signalRClient);
 
-           var  client = await HubCommands.GetClientAsync(signalRClient);
+            var  client = await HubCommands.GetClientAsync(signalRClient);
 
             await HubCommands.InviteMemberAsync(signalRClient, channel.Id, secondMember.MemberId);
 
@@ -210,6 +208,7 @@ namespace Softeq.NetKit.Chat.ConsoleClient
             await HubCommands.InviteMemberAsync(signalRClient, channel.Id, secondMember.MemberId);
             await HubCommands.DeleteMemberAsync(signalRClient, channel.Id, secondMember.MemberId);
             await HubCommands.InviteMultipleMembersAsync(signalRClient, channel.Id, secondMember.MemberId);
+            await HubCommands.LeaveChannelAsync(signalRClient, channel.Id);
             await HubCommands.DeleteMemberAsync(signalRClient, channel.Id, secondMember.MemberId);
             await signalRClient.DisconnectAsync();
         }
