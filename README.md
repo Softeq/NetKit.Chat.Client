@@ -13,7 +13,7 @@ Service tests the following types of functional:
 
 ## Configure
 
-Update appsettings.json:
+1. Update appsettings.json:
 
 ```{
   "Chat": {
@@ -32,9 +32,9 @@ Update appsettings.json:
   }
 }
 ```
-Configure your notification hub for iOS push notifications. 
+2. Configure your notification hub for iOS push notifications. 
 
- Run Softeq.NetKit.Chat.SignalRClient.Sample console app. 
+3. Run Softeq.NetKit.Chat.SignalRClient.Sample console app. 
 
 ## About
 This project is maintained by [Softeq Development Corp.](https://www.softeq.com/)
