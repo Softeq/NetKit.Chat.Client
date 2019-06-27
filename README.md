@@ -6,6 +6,9 @@ Service tests the following types of functional:
 2. Messages
 3. Members
 
+## Dependencies
+ - [Softeq.NetKit.Chat.SignalRClient (1.0.5)](https://github.com/Softeq/NetKit.Chat.SignalRClient "Softeq.NetKit.Chat.SignalRClient (1.0.5)")
+
 # Getting Started
 
 ## Configure
@@ -34,10 +37,13 @@ Service tests the following types of functional:
 3. Run Softeq.NetKit.Chat.SignalRClient.Sample console app. 
 
 ## About
-
-This project is maintained by Softeq Development Corp.
-
+This project is maintained by [Softeq Development Corp.](https://www.softeq.com/)
 We specialize in .NET core applications.
+
+ - [Facebook](https://web.facebook.com/Softeq.by/)
+ - [Instagram](https://www.instagram.com/softeq/)
+ - [Twitter](https://twitter.com/Softeq)
+ - [Vk](https://vk.com/club21079655)
 
 ## Contributing
 
