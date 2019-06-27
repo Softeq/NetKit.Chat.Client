@@ -7,7 +7,7 @@ Service tests the following types of functional:
 3. Members
 
 ## Dependencies
- - [Softeq.NetKit.Chat.SignalRClient (1.0.3)](https://github.com/Softeq/NetKit.Chat.SignalRClient "Softeq.NetKit.Chat.SignalRClient (1.0.3)")
+ - [Softeq.NetKit.Chat.SignalRClient (1.0.5)](https://github.com/Softeq/NetKit.Chat.SignalRClient "Softeq.NetKit.Chat.SignalRClient (1.0.5)")
 
 # Getting Started
 
